@@ -1,0 +1,418 @@
+﻿@page "/"
+@page "/documentos"
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@inject IDocumentoService DocumentoService
+@inject DocumentoConsultaService ConsultaService
+@inject ILogger<Documentos> Logger
+@implements IDisposable
+
+<section class="page-hero">
+    <div class="page-hero__content">
+        <p class="page-hero__eyebrow">
+            <span class="page-hero__eyebrow-line" aria-hidden="true"></span>
+            Panel de inventario
+        </p>
+        <h1>Documentos</h1>
+        <p class="page-hero__subtitle">
+            Explora los movimientos de inventario disponibles en la API de Ziur,
+            con búsqueda, ordenamiento y paginación.
+        </p>
+        <div class="page-hero__source">
+            <span class="source-dot" aria-hidden="true"></span>
+            <span>Fuente: <strong>API Ziur</strong></span>
+            <span class="source-divider" aria-hidden="true"></span>
+            <span>DocumentosFillsCombos</span>
+        </div>
+    </div>
+
+    <button type="button"
+            class="button-refresh"
+            @onclick="CargarAsync"
+            disabled="@_cargando"
+            aria-label="Actualizar documentos desde la API de Ziur">
+        <svg class="button-refresh__icon @(_cargando ? "is-spinning" : null)"
+             viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M20 11a8 8 0 1 0-2.34 5.66M20 4v7h-7"
+                  stroke="currentColor" stroke-width="1.8"
+                  stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+        @(_cargando ? "Actualizando..." : "Actualizar")
+    </button>
+</section>
+
+@if (_error is not null)
+{
+    <div class="alert-error" role="alert">
+        <span class="alert-error__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none">
+                <path d="M12 8v5M12 16.5v.5M10.3 3.9 2.8 17a2 2 0 0 0 1.7 3h15a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"
+                      stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+        </span>
+        <div class="alert-error__content">
+            <h2>No pudimos cargar los documentos</h2>
+            <p>@_error</p>
+        </div>
+        <button type="button" class="button-retry" @onclick="CargarAsync" disabled="@_cargando">
+            Reintentar
+        </button>
+    </div>
+}
+
+@if (_cargando && _documentos.Count == 0)
+{
+    <section class="stats-grid" aria-hidden="true">
+        @for (var i = 0; i < 3; i++)
+        {
+            <article class="stat-card">
+                <span class="skeleton skeleton--stat-icon"></span>
+                <span class="stat-card__copy">
+                    <span class="skeleton skeleton--stat-label"></span>
+                    <span class="skeleton skeleton--stat-value"></span>
+                </span>
+            </article>
+        }
+    </section>
+
+    <section class="data-card" aria-busy="true" aria-label="Cargando documentos">
+        <div class="data-toolbar">
+            <span class="skeleton skeleton--search"></span>
+            <span class="skeleton skeleton--toolbar-meta"></span>
+        </div>
+        <div class="table-loading" role="status">
+            <p class="table-loading__caption">
+                <span class="mini-spinner" aria-hidden="true"></span>
+                Consultando la API de Ziur...
+            </p>
+            @for (var i = 0; i < 7; i++)
+            {
+                <div class="skeleton-row">
+                    <span class="skeleton skeleton--code"></span>
+                    <span class="skeleton skeleton--text"></span>
+                    <span class="skeleton skeleton--badge"></span>
+                </div>
+            }
+        </div>
+    </section>
+}
+else if (_documentos.Count > 0)
+{
+    <section class="stats-grid" aria-label="Resumen de documentos">
+        <article class="stat-card">
+            <span class="stat-card__icon stat-card__icon--violet" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none">
+                    <path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"
+                          stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+                </svg>
+            </span>
+            <span class="stat-card__copy">
+                <span class="stat-card__label">Total documentos</span>
+                <span class="stat-card__value">@_documentos.Count</span>
+            </span>
+        </article>
+
+        <article class="stat-card">
+            <span class="stat-card__icon stat-card__icon--teal" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none">
+                    <path d="m7 12.5 3.2 3.2L17.5 8.5" stroke="currentColor"
+                          stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+                    <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6" />
+                </svg>
+            </span>
+            <span class="stat-card__copy">
+                <span class="stat-card__label">Activos</span>
+                <span class="stat-card__value">@TotalActivos</span>
+            </span>
+        </article>
+
+        <article class="stat-card">
+            <span class="stat-card__icon stat-card__icon--slate" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none">
+                    <path d="M8 12h8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+                    <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6" />
+                </svg>
+            </span>
+            <span class="stat-card__copy">
+                <span class="stat-card__label">Inactivos</span>
+                <span class="stat-card__value">@TotalInactivos</span>
+            </span>
+        </article>
+    </section>
+
+    <section class="data-card" aria-busy="@(_cargando ? "true" : "false")">
+        @if (_cargando)
+        {
+            <div class="data-card__progress" role="progressbar" aria-label="Actualizando documentos"></div>
+        }
+
+        <div class="data-toolbar">
+            <div class="search-field">
+                <svg class="search-field__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <circle cx="11" cy="11" r="6.5" stroke="currentColor" stroke-width="1.8" />
+                    <path d="m16 16 4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+                </svg>
+                <input type="search"
+                       class="search-field__input"
+                       placeholder="Buscar por código o descripción..."
+                       aria-label="Buscar documentos por código o descripción"
+                       autocomplete="off"
+                       @bind="_busqueda"
+                       @bind:event="oninput"
+                       @bind:after="AlBuscar" />
+                @if (!string.IsNullOrEmpty(_busqueda))
+                {
+                    <button type="button"
+                            class="search-field__clear"
+                            @onclick="LimpiarBusqueda"
+                            aria-label="Limpiar búsqueda">
+                        <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                            <path d="m4 4 8 8M12 4l-8 8" stroke="currentColor"
+                                  stroke-width="1.6" stroke-linecap="round" />
+                        </svg>
+                    </button>
+                }
+            </div>
+
+            <div class="data-toolbar__meta">
+                <span class="results-count" aria-live="polite">
+                    @_totalFiltrado @(_totalFiltrado == 1 ? "resultado" : "resultados")
+                </span>
+                <label class="page-size">
+                    <span>Filas</span>
+                    <select @bind="_tamanoPagina" @bind:after="CambiarTamanoPagina"
+                            aria-label="Cantidad de filas por página">
+                        <option value="10">10</option>
+                        <option value="25">25</option>
+                        <option value="50">50</option>
+                    </select>
+                </label>
+            </div>
+        </div>
+
+        @if (_vista.Count > 0)
+        {
+            <TablaDocumentos Documentos="_vista"
+                             ColumnaOrden="_columnaOrden"
+                             Ascendente="_ascendente"
+                             OnOrdenar="OrdenarPor" />
+
+            <footer class="data-footer">
+                <p class="data-footer__summary">
+                    Mostrando <strong>@_inicioRango–@_finRango</strong>
+                    de <strong>@_totalFiltrado</strong>
+                </p>
+
+                <p class="data-footer__updated">
+                    <span class="sync-dot" aria-hidden="true"></span>
+                    Actualizado @UltimaActualizacionTexto
+                </p>
+
+                <nav class="pager" aria-label="Paginación de documentos">
+                    <button type="button"
+                            class="pager__button"
+                            @onclick="() => IrAPagina(_paginaActual - 1)"
+                            disabled="@(_paginaActual <= 1)"
+                            aria-label="Página anterior">
+                        <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                            <path d="m10 3-5 5 5 5" stroke="currentColor"
+                                  stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                    </button>
+                    <span class="pager__status">Página <strong>@_paginaActual</strong> de @_totalPaginas</span>
+                    <button type="button"
+                            class="pager__button"
+                            @onclick="() => IrAPagina(_paginaActual + 1)"
+                            disabled="@(_paginaActual >= _totalPaginas)"
+                            aria-label="Página siguiente">
+                        <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                            <path d="m6 3 5 5-5 5" stroke="currentColor"
+                                  stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                    </button>
+                </nav>
+            </footer>
+        }
+        else
+        {
+            <div class="table-empty">
+                <span class="table-empty__icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none">
+                        <circle cx="11" cy="11" r="6.5" stroke="currentColor" stroke-width="1.7" />
+                        <path d="m16 16 4 4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+                    </svg>
+                </span>
+                <h2>No encontramos resultados</h2>
+                <p>No hay documentos que coincidan con <strong>«@_busqueda»</strong>.</p>
+                <button type="button" class="button-secondary" @onclick="LimpiarBusqueda">
+                    Limpiar búsqueda
+                </button>
+            </div>
+        }
+    </section>
+}
+else if (!_cargando && _error is null)
+{
+    <section class="empty-card">
+        <span class="empty-card__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none">
+                <path d="M5 4.5h14v15H5zM8 8h8M8 11.5h8M8 15h5"
+                      stroke="currentColor" stroke-width="1.6"
+                      stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+        </span>
+        <h2>Sin documentos por mostrar</h2>
+        <p>La API respondió correctamente, pero no devolvió registros de inventario.</p>
+        <button type="button" class="button-secondary" @onclick="CargarAsync">
+            Volver a consultar
+        </button>
+    </section>
+}
+
+@code {
+    private readonly CancellationTokenSource _cancelacion = new();
+
+    private IReadOnlyList<Documento> _documentos = Array.Empty<Documento>();
+    private IReadOnlyList<Documento> _vista = Array.Empty<Documento>();
+    private string _busqueda = string.Empty;
+    private ColumnaDocumento? _columnaOrden;
+    private bool _ascendente = true;
+    private int _paginaActual = 1;
+    private int _totalPaginas = 1;
+    private int _totalFiltrado;
+    private int _inicioRango;
+    private int _finRango;
+    private int _tamanoPagina = 10;
+    private bool _cargando;
+    private bool _cancelado;
+    private string? _error;
+    private DateTimeOffset? _ultimaActualizacion;
+
+    private int TotalActivos => _documentos.Count(documento => documento.VActiva);
+    private int TotalInactivos => _documentos.Count - TotalActivos;
+
+    private string UltimaActualizacionTexto => _ultimaActualizacion is { } valor
+        ? valor.ToLocalTime().ToString("dd/MM/yyyy · HH:mm:ss")
+        : "sin sincronizar";
+
+    protected override Task OnInitializedAsync() => CargarAsync();
+
+    private async Task CargarAsync()
+    {
+        if (_cargando)
+        {
+            return;
+        }
+
+        _cargando = true;
+        _error = null;
+
+        try
+        {
+            var documentos = await DocumentoService.ObtenerDocumentosAsync(_cancelacion.Token);
+
+            _documentos = documentos;
+            _ultimaActualizacion = DateTimeOffset.Now;
+            _paginaActual = 1;
+            ActualizarVista();
+        }
+        catch (OperationCanceledException) when (_cancelado)
+        {
+            // La página se cerró mientras la solicitud estaba en curso.
+        }
+        catch (ZiurApiException ex)
+        {
+            Logger.LogWarning(ex, "No se pudieron cargar los documentos de Ziur.");
+            _error = ex.Message;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error inesperado al cargar los documentos de Ziur.");
+            _error = "Ocurrió un error inesperado al cargar los documentos. Intenta de nuevo.";
+        }
+        finally
+        {
+            _cargando = false;
+        }
+    }
+
+    private void ActualizarVista()
+    {
+        var resultado = ConsultaService.Consultar(
+            _documentos,
+            new ParametrosConsultaDocumentos(
+                _busqueda,
+                _columnaOrden,
+                _ascendente,
+                _paginaActual,
+                _tamanoPagina));
+
+        _vista = resultado.Documentos;
+        _totalFiltrado = resultado.Total;
+        _paginaActual = resultado.PaginaActual;
+        _totalPaginas = resultado.TotalPaginas;
+        _inicioRango = resultado.Total == 0
+            ? 0
+            : ((resultado.PaginaActual - 1) * _tamanoPagina) + 1;
+        _finRango = resultado.Total == 0
+            ? 0
+            : Math.Min(resultado.PaginaActual * _tamanoPagina, resultado.Total);
+    }
+
+    private void AlBuscar()
+    {
+        _paginaActual = 1;
+        ActualizarVista();
+    }
+
+    private void LimpiarBusqueda()
+    {
+        if (_busqueda.Length == 0)
+        {
+            return;
+        }
+
+        _busqueda = string.Empty;
+        _paginaActual = 1;
+        ActualizarVista();
+    }
+
+    private void CambiarTamanoPagina()
+    {
+        _paginaActual = 1;
+        ActualizarVista();
+    }
+
+    private void OrdenarPor(ColumnaDocumento columna)
+    {
+        if (_columnaOrden == columna)
+        {
+            _ascendente = !_ascendente;
+        }
+        else
+        {
+            _columnaOrden = columna;
+            _ascendente = true;
+        }
+
+        _paginaActual = 1;
+        ActualizarVista();
+    }
+
+    private void IrAPagina(int pagina)
+    {
+        if (pagina < 1 || pagina > _totalPaginas || pagina == _paginaActual)
+        {
+            return;
+        }
+
+        _paginaActual = pagina;
+        ActualizarVista();
+    }
+
+    public void Dispose()
+    {
+        _cancelado = true;
+        _cancelacion.Cancel();
+        _cancelacion.Dispose();
+    }
+}

@@ -1,0 +1,15 @@
+**/bin/
+**/obj/
+**/TestResults/
+**/coverage/
+.git/
+.vs/
+.vscode/
+.idea/
+docs/
+README.md
+Dockerfile
+.dockerignore
+.env
+.env.*
+appsettings.*.local.json

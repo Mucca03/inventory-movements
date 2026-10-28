@@ -1,0 +1,90 @@
+@using PruebaBlazorZiur.Modelos
+
+<table class="doc-table">
+    <caption class="visually-hidden">
+        Documentos de inventario de Ziur. Usa los encabezados para ordenar la lista.
+    </caption>
+    <thead>
+        <tr>
+            <th scope="col" class="doc-table__code" aria-sort="@ObtenerAriaSort(ColumnaDocumento.Codigo)">
+                <button type="button" class="sort-button" @onclick="() => Ordenar(ColumnaDocumento.Codigo)">
+                    <span>Código</span>
+                    @IndicadorOrden(ColumnaDocumento.Codigo)
+                </button>
+            </th>
+            <th scope="col" aria-sort="@ObtenerAriaSort(ColumnaDocumento.Descripcion)">
+                <button type="button" class="sort-button" @onclick="() => Ordenar(ColumnaDocumento.Descripcion)">
+                    <span>Descripción</span>
+                    @IndicadorOrden(ColumnaDocumento.Descripcion)
+                </button>
+            </th>
+            <th scope="col" class="doc-table__status" aria-sort="@ObtenerAriaSort(ColumnaDocumento.VActiva)">
+                <button type="button" class="sort-button" @onclick="() => Ordenar(ColumnaDocumento.VActiva)">
+                    <span>Estado</span>
+                    @IndicadorOrden(ColumnaDocumento.VActiva)
+                </button>
+            </th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var documento in Documentos)
+        {
+            <tr>
+                <td class="doc-table__code">
+                    <span class="code-chip">@documento.Codigo</span>
+                </td>
+                <td class="doc-table__description">@documento.Descripcion</td>
+                <td class="doc-table__status">
+                    <span class="status-badge @(documento.VActiva ? "status-badge--active" : "status-badge--inactive")">
+                        <span class="status-badge__dot" aria-hidden="true"></span>
+                        @documento.EstadoTexto
+                    </span>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    [Parameter, EditorRequired]
+    public IReadOnlyList<Documento> Documentos { get; set; } = Array.Empty<Documento>();
+
+    [Parameter]
+    public ColumnaDocumento? ColumnaOrden { get; set; }
+
+    [Parameter]
+    public bool Ascendente { get; set; }
+
+    [Parameter]
+    public EventCallback<ColumnaDocumento> OnOrdenar { get; set; }
+
+    private Task Ordenar(ColumnaDocumento columna) => OnOrdenar.InvokeAsync(columna);
+
+    private string ObtenerAriaSort(ColumnaDocumento columna)
+    {
+        if (ColumnaOrden != columna)
+        {
+            return "none";
+        }
+
+        return Ascendente ? "ascending" : "descending";
+    }
+
+    private RenderFragment IndicadorOrden(ColumnaDocumento columna) => @<svg class="@ObtenerClaseIndicador(columna)"
+            viewBox="0 0 12 16" fill="none" aria-hidden="true">
+            <path class="sort-indicator__up" d="M6 1.5 10 6H2l4-4.5Z" fill="currentColor" />
+            <path class="sort-indicator__down" d="M6 14.5 2 10h8l-4 4.5Z" fill="currentColor" />
+        </svg>;
+
+    private string ObtenerClaseIndicador(ColumnaDocumento columna)
+    {
+        if (ColumnaOrden != columna)
+        {
+            return "sort-indicator";
+        }
+
+        return Ascendente
+            ? "sort-indicator sort-indicator--asc"
+            : "sort-indicator sort-indicator--desc";
+    }
+}

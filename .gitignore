@@ -1,0 +1,42 @@
+# Build
+bin/
+obj/
+artifacts/
+publish/
+*.dll
+*.pdb
+*.exe
+
+# IDE / editor
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.swp
+*~
+
+# Tests and coverage
+TestResults/
+coverage/
+*.coverage
+*.coveragexml
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+appsettings.*.local.json
+secrets.json
+*.pfx
+*.key
+
+# Logs and runtime
+logs/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db

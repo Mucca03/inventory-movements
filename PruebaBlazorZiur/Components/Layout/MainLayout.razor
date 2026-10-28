@@ -1,0 +1,41 @@
+﻿@inherits LayoutComponentBase
+
+<div class="app-shell">
+    <header class="app-header">
+        <div class="app-header__content">
+            <a class="app-brand" href="" aria-label="Ziur Software, ir al inicio">
+                <span class="app-brand__mark" aria-hidden="true">Z</span>
+                <span class="app-brand__text">
+                    <span class="app-brand__name">Ziur</span>
+                    <span class="app-brand__tagline">Software</span>
+                </span>
+            </a>
+
+            <NavMenu />
+
+            <div class="app-header__aside">
+                <span class="app-header__badge">
+                    <span class="app-header__dot" aria-hidden="true"></span>
+                    Panel de inventario
+                </span>
+            </div>
+        </div>
+    </header>
+
+    <main class="app-main">
+        @Body
+    </main>
+
+    <footer class="app-footer">
+        <div class="app-footer__content">
+            <span>Prueba técnica · Desarrollador Full Stack</span>
+            <span class="app-footer__org">Ziur Software Colombia S.A.S.</span>
+        </div>
+    </footer>
+</div>
+
+<div id="blazor-error-ui">
+    Ocurrió un error inesperado en la aplicación.
+    <a href="" class="reload">Recargar</a>
+    <a class="dismiss" aria-label="Cerrar mensaje">✕</a>
+</div>

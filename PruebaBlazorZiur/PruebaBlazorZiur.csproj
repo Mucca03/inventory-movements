@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>PruebaBlazorZiur</RootNamespace>
+    <UserSecretsId>04cd3549-8c4a-4f69-9120-04b02d99e117</UserSecretsId>
+  </PropertyGroup>
+
+</Project>
